@@ -4,27 +4,40 @@ import (
 	"fmt"
 	"net/url"
 
-	"fyne.io/fyne/app"
-	"fyne.io/fyne/cmd/fyne_settings/settings"
-	"fyne.io/fyne/layout"
+	log "github.com/planetsp/k-drive/pkg/logging"
+
+	"github.com/planetsp/k-drive/pkg/models"
+
 	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/cmd/fyne_settings/settings"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
 
+var tableData = [][]string{
+	{"filename", "date modified", "location", "status"}}
+var infoText = "yeah yeah"
+
 func RunUI() {
+	log.Info("Starting ui")
 	myApp := app.New()
 
 	myWindow := myApp.NewWindow("K-Drive")
 	myWindow.SetMainMenu(makeMenu(myApp, myWindow))
-	appInfo := CreateFyneKdriveInfo()
+	appInfo := widget.NewLabel(infoText)
 
-	grid := container.New(layout.NewGridLayout(1), appInfo, CreateFyneFileList(), container.NewMax())
+	grid := container.New(layout.NewGridLayout(1), appInfo, createFyneFileList(), container.NewMax())
 	myWindow.SetContent(grid)
 	myWindow.ShowAndRun()
 }
+func AddSyncInfoToFyneTable(syncInfo *models.SyncInfo) {
+	slice := []string{syncInfo.Filename, syncInfo.DateModified.String(), syncInfo.SyncStatus.String()}
+	tableData = append(tableData, slice)
+}
 
-func CreateFyneFileList() *widget.Table {
+func createFyneFileList() *widget.Table {
 	list := widget.NewTable(
 		func() (int, int) {
 			return len(tableData), len(tableData[0])
