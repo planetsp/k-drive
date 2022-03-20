@@ -19,7 +19,7 @@ import (
 func StartSyncClient() {
 	client := CreateS3Client()
 	log.Info("asfdfssfd")
-	workingDirectory := "."
+	workingDirectory := "../jajaja"
 
 	done := make(chan bool)
 	go MonitorLocalFolderForChanges(client, workingDirectory)
@@ -40,7 +40,7 @@ func CreateS3Client() *s3.Client {
 	client := s3.NewFromConfig(cfg)
 	return client
 }
-func DownloadFileFromCloud(client *s3.Client, filename string) bool {
+func DownloadFileFromCloud(client *s3.Client, filename string, workingDirectory string) bool {
 	result, err := client.GetObject(context.TODO(),
 		&s3.GetObjectInput{
 			Bucket: aws.String("k-drive123"),
@@ -56,7 +56,7 @@ func DownloadFileFromCloud(client *s3.Client, filename string) bool {
 		log.Error(err)
 	}
 
-	err = ioutil.WriteFile(filename, body, 0644)
+	err = ioutil.WriteFile(workingDirectory+filename, body, 0644)
 	if err != nil {
 		log.Error(err)
 	}
@@ -65,8 +65,8 @@ func DownloadFileFromCloud(client *s3.Client, filename string) bool {
 	return false
 }
 
-func UploadFileToCloud(client *s3.Client, filename string) bool {
-	f, err := os.Open(filename)
+func UploadFileToCloud(client *s3.Client, filename string, workingDirectory string) bool {
+	f, err := os.Open(workingDirectory + filename)
 	if err != nil {
 		log.Info("failed to open file %q, %v", filename, err)
 		return false
@@ -148,7 +148,7 @@ func MonitorCloudForChanges(client *s3.Client, workingDirectory string) {
 			filesToBeSyncedToLocalDir := ListItemsInCloudNotAvailableLocally(client, workingDirectory)
 			for _, syncInfo := range filesToBeSyncedToLocalDir {
 				ui.AddSyncInfoToFyneTable(&syncInfo)
-				DownloadFileFromCloud(client, syncInfo.Filename)
+				DownloadFileFromCloud(client, syncInfo.Filename, workingDirectory)
 			}
 		}
 	}
@@ -174,10 +174,10 @@ func MonitorLocalFolderForChanges(client *s3.Client, workingDirectory string) {
 			}
 			log.Info("event:", event)
 			if event.Op&fsnotify.Write == fsnotify.Write {
-				UploadFileToCloud(client, event.Name)
+				UploadFileToCloud(client, event.Name, workingDirectory)
 				log.Info("modified file:", event.Name)
 			} else if event.Op&fsnotify.Create == fsnotify.Create {
-				UploadFileToCloud(client, event.Name)
+				UploadFileToCloud(client, event.Name, workingDirectory)
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {

@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 type FileLocation int
 type SyncStatus int
@@ -14,6 +17,11 @@ const (
 	Uploading              = iota // c1 == 1
 	Downloading            = iota // c1 == 1
 )
+
+type Container struct {
+	mu       sync.Mutex
+	counters map[string]int
+}
 
 // Todo use date and time to decide who
 type SyncInfo struct {
