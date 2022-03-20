@@ -100,7 +100,7 @@ func UploadFileToCloud(client *s3.Client, filename string) *s.SyncInfo {
 func GetSyncDiff(client *s3.Client, workingDirectory string) *s.SyncDiff {
 	diff := s.SyncDiff{
 		FilesNotAvailableInCloud: ListItemsInCloudNotAvailableLocally(client, workingDirectory),
-		FilesNotAvailableLocally: ListItemsInCloudNotAvailableLocally(client, workingDirectory),
+		FilesNotAvailableLocally: ListItemsInLocalDirNotAvailableInCloud(client, workingDirectory),
 	}
 	return &diff
 }
@@ -184,18 +184,18 @@ func MonitorLocalFolderForChanges(client *s3.Client, workingDirectory string, sy
 	defer watcher.Close()
 	for {
 		log.Info("trying to go local")
-
+		notCurrentlyAvailableInCloud := ListItemsInCloud(client)
 		select {
 		case event, ok := <-watcher.Events:
 			if !ok {
 				return
 			}
 			log.Info("event:", event)
-			if event.Op&fsnotify.Write == fsnotify.Write {
-				UploadFileToCloud(client, event.Name)
-				log.Info("modified file:", event.Name)
-			} else if event.Op&fsnotify.Create == fsnotify.Create {
-				UploadFileToCloud(client, event.Name)
+			if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
+				if notCurrentlyAvailableInCloud[event.Name] {
+					UploadFileToCloud(client, event.Name)
+					log.Info("modified file:", event.Name)
+				}
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {

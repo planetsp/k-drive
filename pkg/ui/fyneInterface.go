@@ -18,7 +18,7 @@ import (
 
 var tableData = [][]string{
 	{"filename", "date modified", "location", "status"}}
-var infoText = "yeah yeah"
+var infoText = "hey youtube joyboy here"
 
 func RunUI() {
 	log.Info("Starting ui")
@@ -50,7 +50,7 @@ func createFyneFileList() *widget.Table {
 			return widget.NewLabel("Super duper duper wide string")
 		},
 		func(i widget.TableCellID, o fyne.CanvasObject) {
-			o.(*widget.Label).SetText(tableData[i.Row][i.Col])
+			o.(*widget.Label).SetText(GenerateLabelText(tableData[i.Row][i.Col]))
 		})
 	return list
 }
@@ -125,4 +125,12 @@ func shortcutFocused(s fyne.Shortcut, w fyne.Window) {
 	if focused, ok := w.Canvas().Focused().(fyne.Shortcutable); ok {
 		focused.TypedShortcut(s)
 	}
+}
+
+func GenerateLabelText(originalStr string) string {
+	label := originalStr
+	if len(label) > 20 {
+		label = fmt.Sprintf("%s...", originalStr[0:20])
+	}
+	return label
 }
