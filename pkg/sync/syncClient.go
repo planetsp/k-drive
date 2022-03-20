@@ -2,14 +2,12 @@ package sync
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
 
 	log "github.com/planetsp/k-drive/pkg/logging"
 	s "github.com/planetsp/k-drive/pkg/models"
-	"github.com/planetsp/k-drive/pkg/ui"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -17,10 +15,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-func StartSyncClient(syncInfoChannel chan *s.SyncInfo) {
+func StartSyncClient(syncInfoChannel chan *s.SyncInfo, workingDirectory string) {
 	client := CreateS3Client()
-	log.Info("asfdfssfd")
-	workingDirectory := "/Users/kevinkusi/GitHub/jajaja/"
 
 	done := make(chan bool)
 	go MonitorLocalFolderForChanges(client, workingDirectory, syncInfoChannel)
@@ -41,7 +37,7 @@ func CreateS3Client() *s3.Client {
 	client := s3.NewFromConfig(cfg)
 	return client
 }
-func DownloadFileFromCloud(client *s3.Client, filename string) *s.SyncInfo {
+func DownloadFileFromCloud(client *s3.Client, filename string, workingDirectory string) *s.SyncInfo {
 	result, err := client.GetObject(context.TODO(),
 		&s3.GetObjectInput{
 			Bucket: aws.String("k-drive123"),
@@ -57,7 +53,7 @@ func DownloadFileFromCloud(client *s3.Client, filename string) *s.SyncInfo {
 		log.Error(err)
 	}
 
-	err = ioutil.WriteFile(filename, body, 0644)
+	err = ioutil.WriteFile(workingDirectory+filename, body, 0644)
 	if err != nil {
 		log.Error(err)
 	}
@@ -74,14 +70,14 @@ func DownloadFileFromCloud(client *s3.Client, filename string) *s.SyncInfo {
 func UploadFileToCloud(client *s3.Client, filename string) *s.SyncInfo {
 	f, err := os.Open(filename)
 	if err != nil {
-		log.Info("failed to open file %q, %v", filename, err)
+		log.Error("failed to open file %q, %v", filename, err)
 		return nil
 	}
 	// get last modified time
 	file, err := os.Stat(filename)
 
 	if err != nil {
-		fmt.Println(err)
+		log.Error(err)
 	}
 	log.Info("uploading %q to cloud", filename)
 	client.PutObject(context.TODO(),
@@ -112,7 +108,6 @@ func ListItemsInCloud(client *s3.Client) map[string]bool {
 	if err != nil {
 		log.Error(err)
 	}
-	log.Info("getting items available in cloud")
 	for _, object := range output.Contents {
 		filenameSet[*object.Key] = true
 	}
@@ -124,7 +119,6 @@ func ListItemsInLocalDir(workingDirectory string) map[string]bool {
 	if err != nil {
 		log.Error(err)
 	}
-	log.Info("getting items available locally")
 
 	for _, file := range files {
 		if !file.IsDir() {
@@ -162,11 +156,9 @@ func MonitorCloudForChanges(client *s3.Client, workingDirectory string, syncInfo
 	for {
 		select {
 		case <-uptimeTicker.C:
-			log.Info("trying to go cloud")
 			filesToBeSyncedToLocalDir := ListItemsInCloudNotAvailableLocally(client, workingDirectory)
 			for _, syncInfo := range filesToBeSyncedToLocalDir {
-				ui.AddSyncInfoToFyneTable(&syncInfo)
-				DownloadFileFromCloud(client, syncInfo.Filename)
+				syncInfoChannel <- DownloadFileFromCloud(client, syncInfo.Filename, workingDirectory)
 			}
 		}
 	}
@@ -183,7 +175,6 @@ func MonitorLocalFolderForChanges(client *s3.Client, workingDirectory string, sy
 	}
 	defer watcher.Close()
 	for {
-		log.Info("trying to go local")
 		notCurrentlyAvailableInCloud := ListItemsInCloud(client)
 		select {
 		case event, ok := <-watcher.Events:
@@ -193,7 +184,7 @@ func MonitorLocalFolderForChanges(client *s3.Client, workingDirectory string, sy
 			log.Info("event:", event)
 			if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
 				if notCurrentlyAvailableInCloud[event.Name] {
-					UploadFileToCloud(client, event.Name)
+					syncInfoChannel <- UploadFileToCloud(client, event.Name)
 					log.Info("modified file:", event.Name)
 				}
 			}
@@ -201,7 +192,7 @@ func MonitorLocalFolderForChanges(client *s3.Client, workingDirectory string, sy
 			if !ok {
 				return
 			}
-			log.Info("error:", err)
+			log.Error("error:", err)
 		}
 	}
 

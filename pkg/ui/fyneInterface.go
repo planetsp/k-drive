@@ -17,31 +17,44 @@ import (
 )
 
 var tableData = [][]string{
-	{"filename", "date modified", "location", "status"}}
-var infoText = "hey youtube joyboy here"
+	{"Filename", "Date Modified", "Location", "Status"}}
+var cloudProvider = "AWS S3"
+var workingDirectory = "."
 
 func RunUI() {
 	log.Info("Starting ui")
 	myApp := app.New()
 
 	myWindow := myApp.NewWindow("K-Drive")
+	myWindow.Resize(fyne.NewSize(900, 400))
 	myWindow.SetMainMenu(makeMenu(myApp, myWindow))
-	appInfo := widget.NewLabel(infoText)
 
-	grid := container.New(layout.NewGridLayout(1), appInfo, createFyneFileList(), container.NewMax())
+	grid := container.New(layout.NewGridLayout(1), makeHeader(), makeFileList(), container.NewMax())
 	myWindow.SetContent(grid)
 	myWindow.ShowAndRun()
 }
 func AddSyncInfoToFyneTable(syncInfo *s.SyncInfo) {
-	log.Info("%s is being added to the thing, not sure why error", syncInfo.Filename, syncInfo.Location)
+	log.Info("Adding %s to Fyne Table", syncInfo.Filename, syncInfo.Location)
 	slice := []string{syncInfo.Filename,
 		syncInfo.DateModified.Format("Mon Jan _2 15:04:05 2006"),
 		syncInfo.Location.String(),
 		syncInfo.SyncStatus.String()}
 	tableData = append(tableData, slice)
 }
+func SetWorkingDirectory(workingDir string) {
+	workingDirectory = workingDir
+}
+func makeHeader() *widget.Label {
+	headerString := fmt.Sprintf(
+		`This is a mini Sync Client written in Golang by @planetsp on GitHub.
+I used Fyne to write the GUI, and the official %s SDKs to write the storage logic.
+The local monitoring logic is taken from the watchdog library.
+The local working directory is "%s".`, cloudProvider, workingDirectory)
+	appInfo := widget.NewLabel(headerString)
+	return appInfo
+}
 
-func createFyneFileList() *widget.Table {
+func makeFileList() *widget.Table {
 	list := widget.NewTable(
 		func() (int, int) {
 			return len(tableData), len(tableData[0])
@@ -51,6 +64,10 @@ func createFyneFileList() *widget.Table {
 		},
 		func(i widget.TableCellID, o fyne.CanvasObject) {
 			o.(*widget.Label).SetText(GenerateLabelText(tableData[i.Row][i.Col]))
+			// bold the first row
+			if i.Row == 0 {
+				o.(*widget.Label).TextStyle.Bold = true
+			}
 		})
 	return list
 }

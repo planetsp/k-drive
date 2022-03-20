@@ -11,7 +11,9 @@ import (
 func main() {
 	log.Info("Starting k-drive")
 	syncInfoChannel := make(chan *s.SyncInfo)
-
-	go sync.StartSyncClient(syncInfoChannel)
+	workingDirectory := "/Users/kevinkusi/GitHub/jajaja/"
+	ui.SetWorkingDirectory(workingDirectory)
+	go sync.StartSyncClient(syncInfoChannel, workingDirectory)
+	go ui.AddSyncInfoToFyneTable(<-syncInfoChannel)
 	ui.RunUI()
 }
