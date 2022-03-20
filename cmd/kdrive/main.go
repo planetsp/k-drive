@@ -9,6 +9,6 @@ import (
 
 func main() {
 	log.Info("Starting k-drive")
+	go sync.StartSyncClient()
 	ui.RunUI()
-	sync.StartSyncClient()
 }

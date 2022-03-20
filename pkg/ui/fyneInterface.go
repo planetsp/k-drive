@@ -33,6 +33,7 @@ func RunUI() {
 	myWindow.ShowAndRun()
 }
 func AddSyncInfoToFyneTable(syncInfo *models.SyncInfo) {
+	log.Info(syncInfo.Filename)
 	slice := []string{syncInfo.Filename, syncInfo.DateModified.String(), syncInfo.SyncStatus.String()}
 	tableData = append(tableData, slice)
 }
@@ -46,7 +47,7 @@ func createFyneFileList() *widget.Table {
 			return widget.NewLabel("Super duper duper wide string")
 		},
 		func(i widget.TableCellID, o fyne.CanvasObject) {
-
+			log.Info(tableData[i.Row][i.Col])
 			o.(*widget.Label).SetText(tableData[i.Row][i.Col])
 		})
 	return list
