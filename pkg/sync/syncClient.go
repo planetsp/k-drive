@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"time"
@@ -16,15 +17,15 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-func StartSyncClient() {
+func StartSyncClient(syncInfoChannel chan *s.SyncInfo) {
 	client := CreateS3Client()
 	log.Info("asfdfssfd")
-	workingDirectory := "../jajaja"
+	workingDirectory := "/Users/kevinkusi/GitHub/jajaja/"
 
 	done := make(chan bool)
-	go MonitorLocalFolderForChanges(client, workingDirectory)
+	go MonitorLocalFolderForChanges(client, workingDirectory, syncInfoChannel)
 
-	go MonitorCloudForChanges(client, workingDirectory)
+	go MonitorCloudForChanges(client, workingDirectory, syncInfoChannel)
 
 	<-done
 }
@@ -40,7 +41,7 @@ func CreateS3Client() *s3.Client {
 	client := s3.NewFromConfig(cfg)
 	return client
 }
-func DownloadFileFromCloud(client *s3.Client, filename string, workingDirectory string) bool {
+func DownloadFileFromCloud(client *s3.Client, filename string) *s.SyncInfo {
 	result, err := client.GetObject(context.TODO(),
 		&s3.GetObjectInput{
 			Bucket: aws.String("k-drive123"),
@@ -56,20 +57,31 @@ func DownloadFileFromCloud(client *s3.Client, filename string, workingDirectory 
 		log.Error(err)
 	}
 
-	err = ioutil.WriteFile(workingDirectory+filename, body, 0644)
+	err = ioutil.WriteFile(filename, body, 0644)
 	if err != nil {
 		log.Error(err)
 	}
 	log.Info("downloading %q from cloud", filename)
 
-	return false
+	return &s.SyncInfo{
+		Filename:     filename,
+		DateModified: *result.LastModified,
+		Location:     s.Cloud,
+		SyncStatus:   s.Downloading,
+	}
 }
 
-func UploadFileToCloud(client *s3.Client, filename string, workingDirectory string) bool {
-	f, err := os.Open(workingDirectory + filename)
+func UploadFileToCloud(client *s3.Client, filename string) *s.SyncInfo {
+	f, err := os.Open(filename)
 	if err != nil {
 		log.Info("failed to open file %q, %v", filename, err)
-		return false
+		return nil
+	}
+	// get last modified time
+	file, err := os.Stat(filename)
+
+	if err != nil {
+		fmt.Println(err)
 	}
 	log.Info("uploading %q to cloud", filename)
 	client.PutObject(context.TODO(),
@@ -78,7 +90,12 @@ func UploadFileToCloud(client *s3.Client, filename string, workingDirectory stri
 			Key:    aws.String(filename),
 			Body:   f,
 		})
-	return true
+	return &s.SyncInfo{
+		Filename:     filename,
+		DateModified: file.ModTime(),
+		Location:     s.Local,
+		SyncStatus:   s.Uploading,
+	}
 }
 func GetSyncDiff(client *s3.Client, workingDirectory string) *s.SyncDiff {
 	diff := s.SyncDiff{
@@ -139,7 +156,8 @@ func ListDiffBetweenSets(mapA map[string]bool, sliceB map[string]bool) []s.SyncI
 	}
 	return diff
 }
-func MonitorCloudForChanges(client *s3.Client, workingDirectory string) {
+func MonitorCloudForChanges(client *s3.Client, workingDirectory string, syncInfoChannel chan *s.SyncInfo) {
+
 	uptimeTicker := time.NewTicker(30 * time.Second)
 	for {
 		select {
@@ -148,13 +166,13 @@ func MonitorCloudForChanges(client *s3.Client, workingDirectory string) {
 			filesToBeSyncedToLocalDir := ListItemsInCloudNotAvailableLocally(client, workingDirectory)
 			for _, syncInfo := range filesToBeSyncedToLocalDir {
 				ui.AddSyncInfoToFyneTable(&syncInfo)
-				DownloadFileFromCloud(client, syncInfo.Filename, workingDirectory)
+				DownloadFileFromCloud(client, syncInfo.Filename)
 			}
 		}
 	}
 }
 
-func MonitorLocalFolderForChanges(client *s3.Client, workingDirectory string) {
+func MonitorLocalFolderForChanges(client *s3.Client, workingDirectory string, syncInfoChannel chan *s.SyncInfo) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		log.Error(err)
@@ -174,10 +192,10 @@ func MonitorLocalFolderForChanges(client *s3.Client, workingDirectory string) {
 			}
 			log.Info("event:", event)
 			if event.Op&fsnotify.Write == fsnotify.Write {
-				UploadFileToCloud(client, event.Name, workingDirectory)
+				UploadFileToCloud(client, event.Name)
 				log.Info("modified file:", event.Name)
 			} else if event.Op&fsnotify.Create == fsnotify.Create {
-				UploadFileToCloud(client, event.Name, workingDirectory)
+				UploadFileToCloud(client, event.Name)
 			}
 		case err, ok := <-watcher.Errors:
 			if !ok {

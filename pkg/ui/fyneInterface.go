@@ -3,11 +3,10 @@ package ui
 import (
 	"fmt"
 	"net/url"
-	"sync"
 
 	log "github.com/planetsp/k-drive/pkg/logging"
 
-	"github.com/planetsp/k-drive/pkg/models"
+	s "github.com/planetsp/k-drive/pkg/models"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -33,12 +32,12 @@ func RunUI() {
 	myWindow.SetContent(grid)
 	myWindow.ShowAndRun()
 }
-func AddSyncInfoToFyneTable(syncInfo *models.SyncInfo) {
-	var m sync.Mutex
-	m.Lock()
-	defer m.Unlock()
-	log.Info("%s is being added to the thing, not sure why error", syncInfo.Filename)
-	slice := []string{syncInfo.Filename, syncInfo.DateModified.String(), syncInfo.SyncStatus.String()}
+func AddSyncInfoToFyneTable(syncInfo *s.SyncInfo) {
+	log.Info("%s is being added to the thing, not sure why error", syncInfo.Filename, syncInfo.Location)
+	slice := []string{syncInfo.Filename,
+		syncInfo.DateModified.Format("Mon Jan _2 15:04:05 2006"),
+		syncInfo.Location.String(),
+		syncInfo.SyncStatus.String()}
 	tableData = append(tableData, slice)
 }
 
@@ -51,7 +50,6 @@ func createFyneFileList() *widget.Table {
 			return widget.NewLabel("Super duper duper wide string")
 		},
 		func(i widget.TableCellID, o fyne.CanvasObject) {
-			//log.Info(tableData[i.Row][i.Col])
 			o.(*widget.Label).SetText(tableData[i.Row][i.Col])
 		})
 	return list

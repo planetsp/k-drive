@@ -1,7 +1,6 @@
 package models
 
 import (
-	"sync"
 	"time"
 )
 
@@ -10,18 +9,13 @@ type SyncStatus int
 
 const ( // iota is reset to 0
 	Cloud FileLocation = iota // c0 == 0
-	Local              = iota // c1 == 1
+	Local FileLocation = iota // c1 == 1
 )
 const (
 	Synced      SyncStatus = iota // c0 == 0
-	Uploading              = iota // c1 == 1
-	Downloading            = iota // c1 == 1
+	Uploading   SyncStatus = iota // c1 == 1
+	Downloading SyncStatus = iota // c1 == 1
 )
-
-type Container struct {
-	mu       sync.Mutex
-	counters map[string]int
-}
 
 // Todo use date and time to decide who
 type SyncInfo struct {
@@ -50,6 +44,14 @@ func (sS SyncStatus) String() string {
 		return "Uploading"
 	} else if sS == Downloading {
 		return "Downloading"
+	}
+	return "fasdsdfafdsa"
+}
+func (loc FileLocation) String() string {
+	if loc == Cloud {
+		return "Cloud"
+	} else if loc == Local {
+		return "Local"
 	}
 	return "fasdsdfafdsa"
 }
