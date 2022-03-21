@@ -44,8 +44,10 @@ func (sS SyncStatus) String() string {
 		return "Uploading"
 	} else if sS == Downloading {
 		return "Downloading"
+	} else if sS == Synced {
+		return "Synced"
 	}
-	return "fasdsdfafdsa"
+	return "Unknown"
 }
 func (loc FileLocation) String() string {
 	if loc == Cloud {
@@ -53,5 +55,5 @@ func (loc FileLocation) String() string {
 	} else if loc == Local {
 		return "Local"
 	}
-	return "fasdsdfafdsa"
+	return "Unknown"
 }

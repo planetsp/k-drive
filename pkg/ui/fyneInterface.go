@@ -6,6 +6,7 @@ import (
 
 	log "github.com/planetsp/k-drive/pkg/logging"
 
+	c "github.com/planetsp/k-drive/pkg/config"
 	s "github.com/planetsp/k-drive/pkg/models"
 
 	"fyne.io/fyne/v2"
@@ -18,14 +19,14 @@ import (
 
 var tableData = [][]string{
 	{"Filename", "Date Modified", "Location", "Status"}}
-var cloudProvider = "AWS S3"
-var workingDirectory = "."
+var cloudProvider = c.GetConfig().CloudProvider
+var workingDirectory = c.GetConfig().WorkingDirectory
 
 func RunUI() {
 	log.Info("Starting ui")
 	myApp := app.New()
 
-	myWindow := myApp.NewWindow("K-Drive")
+	myWindow := myApp.NewWindow(c.GetConfig().AppName)
 	myWindow.Resize(fyne.NewSize(900, 400))
 	myWindow.SetMainMenu(makeMenu(myApp, myWindow))
 

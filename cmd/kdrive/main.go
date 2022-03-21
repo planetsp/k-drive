@@ -11,9 +11,7 @@ import (
 func main() {
 	log.Info("Starting k-drive")
 	syncInfoChannel := make(chan *s.SyncInfo)
-	workingDirectory := "/Users/kevinkusi/GitHub/jajaja/"
-	ui.SetWorkingDirectory(workingDirectory)
-	go sync.StartSyncClient(syncInfoChannel, workingDirectory)
+	go sync.StartSyncClient(syncInfoChannel)
 	go func() {
 		for blah := range syncInfoChannel {
 			log.Info("made it")

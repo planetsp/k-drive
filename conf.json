@@ -1,0 +1,7 @@
+{
+    "appName": "K-Drive",
+    "workingDirectory": "/Users/kevinkusi/GitHub/jajaja/",
+    "cloudProvider": "aws s3",
+    "bucketName": "k-drive123",
+    "localDirectoryPollingFrequency": 3
+}
