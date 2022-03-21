@@ -60,7 +60,7 @@ func makeFileList() *widget.Table {
 			return len(tableData), len(tableData[0])
 		},
 		func() fyne.CanvasObject {
-			return widget.NewLabel("Super duper duper wide string")
+			return widget.NewLabel("Super duper wide string")
 		},
 		func(i widget.TableCellID, o fyne.CanvasObject) {
 			o.(*widget.Label).SetText(GenerateLabelText(tableData[i.Row][i.Col]))

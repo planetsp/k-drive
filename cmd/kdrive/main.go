@@ -14,6 +14,12 @@ func main() {
 	workingDirectory := "/Users/kevinkusi/GitHub/jajaja/"
 	ui.SetWorkingDirectory(workingDirectory)
 	go sync.StartSyncClient(syncInfoChannel, workingDirectory)
-	go ui.AddSyncInfoToFyneTable(<-syncInfoChannel)
+	go func() {
+		for blah := range syncInfoChannel {
+			log.Info("made it")
+			ui.AddSyncInfoToFyneTable(blah)
+		}
+	}()
 	ui.RunUI()
+
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	log "github.com/planetsp/k-drive/pkg/logging"
@@ -67,14 +68,14 @@ func DownloadFileFromCloud(client *s3.Client, filename string, workingDirectory 
 	}
 }
 
-func UploadFileToCloud(client *s3.Client, filename string) *s.SyncInfo {
-	f, err := os.Open(filename)
+func UploadFileToCloud(client *s3.Client, filename string, workingDirectory string) *s.SyncInfo {
+	f, err := os.Open(workingDirectory + filename)
 	if err != nil {
 		log.Error("failed to open file %q, %v", filename, err)
 		return nil
 	}
 	// get last modified time
-	file, err := os.Stat(filename)
+	file, err := os.Stat(workingDirectory + filename)
 
 	if err != nil {
 		log.Error(err)
@@ -175,17 +176,18 @@ func MonitorLocalFolderForChanges(client *s3.Client, workingDirectory string, sy
 	}
 	defer watcher.Close()
 	for {
-		notCurrentlyAvailableInCloud := ListItemsInCloud(client)
+		availableInCloud := ListItemsInCloud(client)
 		select {
 		case event, ok := <-watcher.Events:
 			if !ok {
 				return
 			}
 			log.Info("event:", event)
+			filename := GetEventFilename(event.Name)
 			if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-				if notCurrentlyAvailableInCloud[event.Name] {
-					syncInfoChannel <- UploadFileToCloud(client, event.Name)
-					log.Info("modified file:", event.Name)
+				if _, ok := availableInCloud[filename]; !ok {
+					syncInfoChannel <- UploadFileToCloud(client, filename, workingDirectory)
+					log.Info("modified file:", filename)
 				}
 			}
 		case err, ok := <-watcher.Errors:
@@ -196,4 +198,10 @@ func MonitorLocalFolderForChanges(client *s3.Client, workingDirectory string, sy
 		}
 	}
 
+}
+
+func GetEventFilename(eventName string) string {
+	splitPathNameSlice := strings.Split(eventName, "/")
+	filename := splitPathNameSlice[len(splitPathNameSlice)-1]
+	return filename
 }
