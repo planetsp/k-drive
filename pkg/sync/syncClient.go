@@ -40,7 +40,7 @@ func CreateS3Client() *s3.Client {
 func DownloadFileFromCloud(client *s3.Client, filename string) *s.SyncInfo {
 	result, err := client.GetObject(context.TODO(),
 		&s3.GetObjectInput{
-			Bucket: aws.String("k-drive123"),
+			Bucket: aws.String(c.GetConfig().BucketName),
 			Key:    aws.String(filename),
 		})
 	if err != nil {
@@ -104,7 +104,7 @@ func GetSyncDiff(client *s3.Client, workingDirectory string) *s.SyncDiff {
 }
 func ListItemsInCloud(client *s3.Client) map[string]bool {
 	filenameSet := make(map[string]bool)
-	log.Info("Checking cloud")
+	log.Debug("Checking cloud")
 
 	output, err := client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
 		Bucket: aws.String(c.GetConfig().BucketName),

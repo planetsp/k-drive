@@ -2,7 +2,6 @@ package logging
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"sync"
 
@@ -10,12 +9,8 @@ import (
 )
 
 type Logger struct {
-	mu     sync.Mutex // ensures atomic writes; protects the following fields
-	prefix string     // prefix to write at beginning of each line
-	flag   int        // properties
-	out    io.Writer  // destination for output
-	buf    []byte     // for accumulating text to write
-	level  int        // One of DEBUG, ERROR, INFO
+	mu    sync.Mutex // ensures atomic writes; protects the following fields
+	level int        // One of DEBUG, ERROR, INFO
 }
 
 var std *Logger
