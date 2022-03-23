@@ -1,6 +1,6 @@
 module github.com/planetsp/k-drive
 
-go 1.16
+go 1.18
 
 require (
 	fyne.io/fyne v1.4.3
