@@ -1,7 +1,7 @@
 {
     "appName": "K-Drive",
-    "workingDirectory": "/tmp/k-drive-sync/",
+    "workingDirectory": "/home/user/k-drive-sync/",
     "cloudProvider": "aws s3",
-    "bucketName": "k-drive123",
+    "bucketName": "your-bucket-name-here",
     "localDirectoryPollingFrequency": 3
 }

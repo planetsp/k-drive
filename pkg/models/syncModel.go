@@ -12,9 +12,9 @@ const ( // iota is reset to 0
 	Local FileLocation = iota // c1 == 1
 )
 const (
-	Synced      SyncStatus = iota // c0 == 0
-	Uploading   SyncStatus = iota // c1 == 1
-	Downloading SyncStatus = iota // c1 == 1
+	Synced      SyncStatus = iota // 0
+	Uploading   SyncStatus = iota // 1
+	Downloading SyncStatus = iota // 2
 )
 
 // Todo use date and time to decide who
