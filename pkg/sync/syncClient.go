@@ -22,29 +22,29 @@ func StartSyncClient(syncInfoChannel chan *s.SyncInfo) {
 		log.Error("Configuration not loaded, cannot start sync client")
 		return
 	}
-	
+
 	config := c.GetConfig()
 	if config.WorkingDirectory == "" || config.BucketName == "" {
 		log.Error("Invalid configuration: missing required fields")
 		return
 	}
-	
+
 	// Check if working directory exists
 	if _, err := os.Stat(config.WorkingDirectory); os.IsNotExist(err) {
 		log.Error("Working directory does not exist: %s", config.WorkingDirectory)
 		log.Info("Please update your configuration with a valid directory path")
 		return
 	}
-	
+
 	client := CreateS3Client()
 	if client == nil {
 		log.Error("Failed to create S3 client, cannot start sync")
 		return
 	}
-	
+
 	log.Info("Starting sync client with working directory: %s", config.WorkingDirectory)
 	log.Info("Syncing with S3 bucket: %s", config.BucketName)
-	
+
 	done := make(chan bool)
 	go MonitorLocalFolderForChanges(client, syncInfoChannel)
 	go MonitorCloudForChanges(client, syncInfoChannel)
@@ -227,18 +227,38 @@ func MonitorCloudForChanges(client *s3.Client, syncInfoChannel chan *s.SyncInfo)
 	testInput := &s3.ListObjectsV2Input{
 		Bucket: aws.String(c.GetConfig().BucketName),
 	}
-	
+
 	_, err := client.ListObjectsV2(context.TODO(), testInput)
 	if err != nil {
+		bucketName := c.GetConfig().BucketName
 		log.Error("Failed to connect to AWS S3: %v", err)
-		log.Info("Cloud monitoring disabled. Please check your AWS configuration")
+
+		// Provide specific guidance based on error type
+		errorStr := err.Error()
+		if strings.Contains(errorStr, "PermanentRedirect") || strings.Contains(errorStr, "301") {
+			log.Info("Bucket '%s' exists in a different AWS region than configured", bucketName)
+			log.Info("Solutions:")
+			log.Info("1. Update your ~/.aws/config to use the correct region for bucket '%s'", bucketName)
+			log.Info("2. Or create a new bucket in your current region")
+			log.Info("3. Or update the bucket name in conf.json to a bucket in your current region")
+		} else if strings.Contains(errorStr, "region") {
+			log.Info("AWS region configuration issue. Please set your region in ~/.aws/config or AWS_DEFAULT_REGION environment variable")
+		} else if strings.Contains(errorStr, "credentials") || strings.Contains(errorStr, "InvalidAccessKeyId") {
+			log.Info("AWS credentials issue. Please check your ~/.aws/credentials or environment variables")
+		} else if strings.Contains(errorStr, "NoSuchBucket") {
+			log.Info("Bucket '%s' does not exist. Please create it or update conf.json with a valid bucket name", bucketName)
+		} else {
+			log.Info("Please check your AWS configuration. See AWS_SETUP.md for help")
+		}
+
+		log.Info("Cloud monitoring disabled until AWS configuration is fixed")
 		return // Exit if we can't connect to AWS
 	}
 
 	log.Info("AWS S3 connectivity test successful")
 	uptimeTicker := time.NewTicker(c.GetConfig().LocalDirectoryPollingFrequency * time.Second)
 	defer uptimeTicker.Stop()
-	
+
 	for {
 		select {
 		case <-uptimeTicker.C:

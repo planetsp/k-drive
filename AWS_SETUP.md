@@ -29,6 +29,48 @@ If you have AWS CLI installed:
 aws configure
 ```
 
+## S3 Bucket Setup
+1. **Create a bucket** in your AWS console or using AWS CLI:
+   ```bash
+   aws s3 mb s3://your-unique-bucket-name --region us-east-1
+   ```
+
+2. **Update conf.json** with your bucket name:
+   ```json
+   {
+     "bucketName": "your-unique-bucket-name"
+   }
+   ```
+
+## Troubleshooting Common Issues
+
+### PermanentRedirect Error (301)
+If you see "PermanentRedirect" error, your bucket exists in a different region:
+
+**Solution 1: Update your region**
+```bash
+# Find your bucket's region
+aws s3api get-bucket-location --bucket your-bucket-name
+
+# Update ~/.aws/config with the correct region
+[default]
+region = eu-west-1  # Use the region from above
+```
+
+**Solution 2: Use a bucket in your current region**
+```bash
+# Create a new bucket in your current region
+aws s3 mb s3://new-bucket-name --region us-east-1
+
+# Update conf.json with the new bucket name
+```
+
+### NoSuchBucket Error
+The bucket doesn't exist. Create it or use an existing bucket name.
+
+### Credentials Error
+Double-check your AWS access keys and ensure they have S3 permissions.
+
 ## Testing
 Once configured, you can test the application:
 ```bash
